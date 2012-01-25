@@ -3,12 +3,16 @@ package oss.alphazero.util.concurrent;
 import java.util.Queue;
 import java.util.concurrent.locks.LockSupport;
 
+import bsh.commands.dir;
+
 public class AdhocTestConcurrent2LockQ {
 	public static void main(String[] args) {
 		new AdhocTestConcurrent2LockQ().run();
 	}
 	private final void run () {
-		Queue<Object> q = new ConsumerProducerQueue<Object>();
+//		Queue<Object> q = new ConsumerProducerQueue<Object>();
+//		Queue<Object> q = new Concurrent2LockQueue<Object>();
+		Queue<Object> q = new Nto1Concurrent2LockQueue<Object>();
 		final Thread tproducer = new Thread(newProducerTask(q), "producer");
 		final Thread tconsumer = new Thread(newConsumerTask(q), "consumer");
 
@@ -17,11 +21,6 @@ public class AdhocTestConcurrent2LockQ {
 			tproducer.start();
 		} catch (Throwable e) { e.printStackTrace(); System.exit(1); }
 
-		//		try {
-		//			tproducer.start();
-		//			tconsumer.start();
-		//		} catch (Throwable e) { e.printStackTrace(); System.exit(1); }
-		//		
 		try {
 			tproducer.join();
 			tconsumer.join();
@@ -32,13 +31,16 @@ public class AdhocTestConcurrent2LockQ {
 		return new Runnable() {
 			@Override final public void run() {
 				Long qitem = new Long(0);
-				final int iters = 1000;
+				final int iters = 1000000;
 				for(;;){
+//					long start = System.nanoTime();
 					for(int i=0; i<iters; i++){
 						q.offer(qitem);
 					}
-					LockSupport.parkNanos(1L);
+//					LockSupport.parkNanos(10L);
 //					qitem = qitem.longValue() + 1;
+//					long delta = System.nanoTime() - start;
+//					System.out.format("enqueue:%d delta:%d msec\n", iters, delta/1000000);
 				}
 			}
 		};
@@ -46,7 +48,7 @@ public class AdhocTestConcurrent2LockQ {
 	private final Runnable newConsumerTask (final Queue<Object> q) {
 		return new Runnable() {
 			@Override final public void run() {
-				int iters = 100000;
+				int iters = 1000000;
 				for(;;){
 					long start = System.nanoTime();
 					for(int i=0; i<iters; i++){
@@ -57,7 +59,8 @@ public class AdhocTestConcurrent2LockQ {
 						}
 					}
 					long delta = System.nanoTime() - start;
-					System.out.format("%d msec\n", delta/1000000);
+					long dqpusec = iters * 1000 / delta;
+					System.out.format("dequeue:%d delta:%d msec dequeues/usec:%d\n", iters, delta/1000000, dqpusec);
 				}
 			}
 		};
