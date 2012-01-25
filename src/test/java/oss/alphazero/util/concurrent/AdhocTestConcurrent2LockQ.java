@@ -1,6 +1,7 @@
 package oss.alphazero.util.concurrent; 
 
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
 import bsh.commands.dir;
@@ -31,13 +32,13 @@ public class AdhocTestConcurrent2LockQ {
 		return new Runnable() {
 			@Override final public void run() {
 				Long qitem = new Long(0);
-				final int iters = 1000000;
+				final int iters = 4000;
 				for(;;){
 //					long start = System.nanoTime();
 					for(int i=0; i<iters; i++){
 						q.offer(qitem);
 					}
-//					LockSupport.parkNanos(10L);
+					LockSupport.parkNanos(100L);
 //					qitem = qitem.longValue() + 1;
 //					long delta = System.nanoTime() - start;
 //					System.out.format("enqueue:%d delta:%d msec\n", iters, delta/1000000);
@@ -48,7 +49,7 @@ public class AdhocTestConcurrent2LockQ {
 	private final Runnable newConsumerTask (final Queue<Object> q) {
 		return new Runnable() {
 			@Override final public void run() {
-				int iters = 1000000;
+				int iters = 100000;
 				for(;;){
 					long start = System.nanoTime();
 					for(int i=0; i<iters; i++){
@@ -59,8 +60,8 @@ public class AdhocTestConcurrent2LockQ {
 						}
 					}
 					long delta = System.nanoTime() - start;
-					long dqpusec = iters * 1000 / delta;
-					System.out.format("dequeue:%d delta:%d msec dequeues/usec:%d\n", iters, delta/1000000, dqpusec);
+					long dqpusec = iters / (delta/1000);
+					System.out.format("dequeue:%d - delta:%d usec - dequeues/usec:%d\n", iters, TimeUnit.NANOSECONDS.toMicros(delta), dqpusec);
 				}
 			}
 		};

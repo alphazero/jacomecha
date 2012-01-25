@@ -7,7 +7,6 @@ public class Nto1Concurrent2LockQueue<E> extends Concurrent2LockQueueBase<E> {
 	// ------------------------------------------------------------------------
 	// Properties
 	// ------------------------------------------------------------------------
-//	private final transient Lock Lh;
 	private final transient Lock Lt;
 
 	// ------------------------------------------------------------------------
@@ -16,7 +15,6 @@ public class Nto1Concurrent2LockQueue<E> extends Concurrent2LockQueueBase<E> {
 
 	Nto1Concurrent2LockQueue () {
     	super();
-//    	Lh = new ReentrantLock(false);
     	Lt = new ReentrantLock(false);
     }
 
