@@ -38,36 +38,4 @@ public class Nto1Concurrent2LockQueue<E> extends Concurrent2LockQueueBase<E> {
     	
     	return r;
     }
-    
-    /* -----------------------------------------------------dequeue items --- */
-	
-//	/* (non-Javadoc) @see java.util.Queue#poll() */
-//	@Override final
-//    public E poll () {
-//    	E item = null;
-//    	
-//    	Lh.lock();
-//    	try{
-//    		item = super.poll();
-//    	} 
-//    	finally { Lh.unlock(); }
-//    	
-//    	final E e = item;
-//    	return e;
-//    }
-//    
-//	/* (non-Javadoc) @see java.util.Queue#peek() */
-//	@Override final
-//    public E peek () {
-//    	E item = null;
-//    	
-//    	Lh.lock();
-//    	try{
-//    		item = super.peek();
-//    	} 
-//    	finally { Lh.unlock(); }
-//    	
-//    	final E e = item;
-//    	return e;
-//    }
 }
