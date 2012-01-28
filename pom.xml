@@ -97,6 +97,16 @@
 		</plugins>
 	</build>
 
+	<!-- license -->
+	<licenses>
+	  <license>
+	     <name>GNU GENERAL PUBLIC LICENSE</name>
+	      <url>http://www.gnu.org/licenses/gpl.txt</url>
+	      <distribution>all</distribution>
+	      <comments>A Freedom Friendly F-OSS license</comments>
+	  </license>
+	</licenses> 
+
 	<!-- info -->
 	<inceptionYear>2012</inceptionYear>
 	<developers>
