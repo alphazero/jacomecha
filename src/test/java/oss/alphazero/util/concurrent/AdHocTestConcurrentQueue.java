@@ -25,11 +25,17 @@ import oss.alphazero.util.Log;
 
 @SuppressWarnings("unused")
 public class AdHocTestConcurrentQueue {
+	
+	static final long NANOS_PER_SEC = TimeUnit.SECONDS.toNanos(1);
+	static final long BITS_PER_BYTE = 8;
+	protected static final long BITS_PER_LONG_WORD = BITS_PER_BYTE * Long.SIZE;
+	
 	public static void main(String[] args) {
 		new AdHocTestConcurrentQueue().run();
 	}
 	private final void run () {
-//		Queue<byte[]> q = new ConcurrentTcpQueueBase();
+//		Queue<byte[]> q = new TcpQueueBase();
+//		Queue<byte[]> q = new TcpNioQueueBase();
 		Queue<byte[]> q = new ConsumerProducerQueue<byte[]>();
 //		Queue<byte[]> q = new Nto1Concurrent2LockQueue<byte[]>();
 //		Queue<byte[]> q = new LinkedBlockingQueue<byte[]>();
@@ -51,29 +57,39 @@ public class AdHocTestConcurrentQueue {
 		} catch (Throwable e) { e.printStackTrace(); System.exit(1); }
 
 	}
+	
 	private final byte[] getBlock(int size){
 		
 		byte[] b = new byte[size];
 		for(int i=0; i<size; i++)
-			b[i] = 100;
-		b[0] = (byte) System.nanoTime();
+			b[i] = (byte) i;
+//		b[0] = (byte) System.nanoTime();
 		return b;
 	}
+	
 	private final Runnable newProducerTask (final Queue<byte[]> q) {
 		return new Runnable() {
 			@Override final public void run() {
-				byte[] data = getBlock(8);
-//				byte[] data = {100,100,100,100,100,100,100,100,100,100,100,100,100,100,10,13 };
-				final int iters = 1024 * 48;
+				byte[] data = getBlock(4096);
+				byte[] buff = new byte[1024 * 4];
+				int off = 0;
+				final int iters = 4096 * 12;
 				for(;;){
 //					long start = System.nanoTime();
 					for(int i=0; i<iters; i++){
-						q.offer(data);
+//						for(int o=0; o<buff.length; o+=8) {
+////							long addr = System.nanoTime();
+//							//							System.arraycopy(getBlock(8), 0, buff, o, 8);
+//							System.arraycopy(getBlock(8), 0, buff, o, 8);
+//						}
+//						q.offer(buff);
+//						q.offer(data);
+						q.offer(getBlock(1024));
 					}
 //					qitem = qitem.longValue() + 1;
 //					long delta = System.nanoTime() - start;
 //					System.out.format("\t[%8s]--enqueue:%5d delta:%8d usec\n", Thread.currentThread().getName(), iters, TimeUnit.NANOSECONDS.toMicros(delta));
-					LockSupport.parkNanos(100L);
+//					LockSupport.parkNanos(1L);
 				}
 			}
 		};
@@ -82,8 +98,12 @@ public class AdHocTestConcurrentQueue {
 		return new Runnable() {
 			@Override final public void run() {
 				int n = 0;
-				int lim = Integer.MAX_VALUE;
-				int blim = 1024 * 1024 * 8;
+//				int lim = Integer.MAX_VALUE;
+				int lim = 100;
+				long totb = 0;
+//				int blim = 1024 * 1024 * 8 * 10;
+//				int blim = 83886080; // 10MBits
+				int blim = 12500000; // 1 MBits
 				long start0 = System.nanoTime();
 //				while(true) {
 				for(int i=0; i<lim; i++){
@@ -100,22 +120,23 @@ public class AdHocTestConcurrentQueue {
 					}
 					long delta = System.nanoTime() - start;
 					n++;
-					try {
-						long bps = rlen*8*1000000000 / delta;
-						long wps = (rlen*1000000000/8) / delta;
-						System.out.format("[%08d] bytes:%d - delta:%8d usec - bps:%16d - wps:%12d\n", n, rlen, TimeUnit.NANOSECONDS.toMicros(delta), bps, wps);
-					} catch (Exception e) {
-						e.printStackTrace();
-						Log.error("divide by zero - bytes:%d - delta: %d",rlen,  delta);
-					}
+//					try {
+//						long bps = rlen * BITS_PER_BYTE * NANOS_PER_SEC / delta;
+//						long wps = bps / BITS_PER_LONG_WORD;
+//						System.out.format("[%08d] bytes:%010d - delta:%8d usec - bps:%16d - wps:%12d\n", n, rlen, TimeUnit.NANOSECONDS.toMicros(delta), bps, wps);
+//					} catch (Exception e) {
+//						e.printStackTrace();
+//						Log.error("divide by zero - bytes:%d - delta: %d",rlen,  delta);
+//					}
+					totb += rlen;
 				}
-//				long delta = System.nanoTime() - start0;
-//				long rlen = lim * blim;
-//				long bps = rlen*8 / TimeUnit.NANOSECONDS.toSeconds(delta);
-//				long wps = (rlen/8) / TimeUnit.NANOSECONDS.toSeconds(delta);
-//				System.out.println();
-//				System.out.format("[TOTAL] bytes:%d - delta:%8d msec - bps:%16d - wps:%12d {%s}\n", rlen, TimeUnit.NANOSECONDS.toMillis(delta), bps, wps, q.getClass().getSimpleName());
-//				System.exit(1);
+				long delta = System.nanoTime() - start0;
+				long rlen = totb;
+				long bps = rlen * BITS_PER_BYTE * NANOS_PER_SEC / delta;
+				long wps = bps / BITS_PER_LONG_WORD;
+				System.out.println();
+				System.out.format("[TOTAL] bytes:%d - delta:%8d msec - bps:%16d - wps:%12d {%s}\n", rlen, TimeUnit.NANOSECONDS.toMillis(delta), bps, wps, q.getClass().getSimpleName());
+				System.exit(1);
 			}
 		};
 	}
