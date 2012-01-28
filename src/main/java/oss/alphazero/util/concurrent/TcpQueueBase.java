@@ -60,18 +60,20 @@ import oss.alphazero.util.support.AbstractNopCollection;
  * can also be utilized.
  * <p>  
  * This class implements (as of now) basic {@link Queue} ops.  
- * It is effectively an 'unbounded' queue.
+ * REVU: wrong:(It is effectively an 'unbounded' queue.) 
+ * TODO: may need to add timeouts on send.
  *    
  * @author Joubin <alphazero@sensesay.net>
  * @date:  Jan 27, 2012
  */
+
 public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue<byte[]>{
 
 	// ----------------------------------------------------------------
 	// Properties 
 	// ----------------------------------------------------------------
 	
-	private static final int SND_BUFF_SIZE = 4096;
+	private static final int SND_BUFF_SIZE = 1024 * 4;
 	private static final int RCV_BUFF_SIZE = 4096 * 48;
 	private static final int SO_RCV_BUFF_SIZE = RCV_BUFF_SIZE;
 	private static final int SO_SND_BUFF_SIZE = SND_BUFF_SIZE;
@@ -181,9 +183,10 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 			Log.log("startup recv endpoint ...");
 			t_recv_bootstrap.start();
 			
+			// TODO: REVU: unreliable -- latch it
 			Thread.sleep(1);
 			while(port_ref.get() == INIT_PORT) {
-				Thread.sleep(1000L);
+				Thread.sleep(100L);
 			}
 				
 			Log.log("startup send endpoint ...");
@@ -191,7 +194,6 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 			t_send_bootstrap = new Thread(snd_bootstrap_task);
 			t_send_bootstrap.start();
 			
-			// TODO: REVU: unreliable -- latch it
 //			while(recvchan_ref.get() == null) {
 //				Thread.sleep(1000L);
 //			}
@@ -226,15 +228,16 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 		
 		return sockets;
 	}
+
+	private static final int SO_BANDWIDTH_PREF = 1;
+	private static final int SO_LATENCY_PREF = 2;
+	private static final int SO_CONNTIME_PREF = 0;
+	
 	// ========================================================================
 	// Inner Class
 	// ========================================================================
 	
 	public class EndpointRecvBootstrap implements Runnable {
-
-		private static final int SO_BANDWIDTH_PREF = 1;
-		private static final int SO_LATENCY_PREF = 2;
-		private static final int SO_CONNTIME_PREF = 0;
 
 		@Override final
 		public void run() {
@@ -257,10 +260,13 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 				
 				Log.log("-- RCV endpoint now accepting connection ..");
 				Socket socket = server.accept();
+				socket.setKeepAlive(true);
+				socket.setPerformancePreferences(SO_CONNTIME_PREF, SO_LATENCY_PREF, SO_BANDWIDTH_PREF);
+				socket.setTcpNoDelay(true);
+				socket.setSendBufferSize(SO_RCV_BUFF_SIZE);
 				SocketAddress remsoaddr = socket.getRemoteSocketAddress();
-				
+
 				Log.log("-- RCV endpoint accepted connection from %s", remsoaddr);
-				
 				
 				if(!rcvsocket_ref.compareAndSet(null, socket))
 					throw new IllegalStateException("recvInUpdater");
@@ -289,7 +295,7 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 				
 				Socket so = new Socket();
 				so.setKeepAlive(true);
-				so.setPerformancePreferences(0, 2, 1);
+				so.setPerformancePreferences(SO_CONNTIME_PREF, SO_LATENCY_PREF, SO_BANDWIDTH_PREF);
 				so.setTcpNoDelay(true);
 				so.setSendBufferSize(SO_SND_BUFF_SIZE);
 				
@@ -320,12 +326,9 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 	@Override
 	public boolean offer(final byte[] b) {
 		boolean res = true;
-//		final OutputStream out = this.sndout;
 			try {
 				this.sndout.write(b);
 				this.sndout.flush();
-//				out.write(b);
-//				out.flush();
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
@@ -336,7 +339,6 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 	@Override
 	public byte[] poll() {
 		byte[] data = null;
-//		final InputStream in = this.rcvin;
 		try {
 			int alen = 0;
 			alen = this.rcvin.available();
@@ -357,7 +359,7 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 	/* (non-Javadoc) @see java.util.Queue#remove() */
 	@Override
 	public byte[] remove() {
-		return null;
+		throw new RuntimeException("Not (yet) supported.");
 	}
 	
 	/* (non-Javadoc) @see java.util.Queue#element() */
@@ -371,9 +373,9 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 	// ========================================================================
 	// Temp Tests // REMOVE AT WILL
 	// ========================================================================
-	public static void main(String[] args) {
-		@SuppressWarnings("unused")
-		Queue<byte[]> pipe = new TcpQueueBase();
-		Log.log("OK, bye!");
-	}
+//	public static void main(String[] args) {
+//		@SuppressWarnings("unused")
+//		Queue<byte[]> pipe = new TcpQueueBase();
+//		Log.log("OK, bye!");
+//	}
 }

@@ -18,6 +18,7 @@
 package oss.alphazero.util.concurrent;
 
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
@@ -40,6 +41,7 @@ public class AdHocTestConcurrentQueue {
 //		Queue<byte[]> q = new ConsumerProducerQueue<byte[]>();
 //		Queue<byte[]> q = new Nto1Concurrent2LockQueue<byte[]>();
 //		Queue<byte[]> q = new LinkedBlockingQueue<byte[]>();
+//		Queue<byte[]> q = new ConcurrentLinkedQueue<byte[]>();
 		final Thread tproducer = new Thread(newProducerTask(q), "producer-1");
 //		final Thread tproducer2 = new Thread(newProducerTask(q), "producer-2");
 //		final Thread tproducer3 = new Thread(newProducerTask(q), "producer-3");
@@ -123,7 +125,7 @@ public class AdHocTestConcurrentQueue {
 							rlen += data.length;
 						}
 					}
-					long delta = System.nanoTime() - start;
+//					long delta = System.nanoTime() - start;
 					n++;
 //					try {
 //						long bps = rlen * BITS_PER_BYTE * NANOS_PER_SEC / delta;
