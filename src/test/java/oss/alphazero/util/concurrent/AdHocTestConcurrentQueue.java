@@ -30,7 +30,7 @@ public class AdHocTestConcurrentQueue {
 	
 	static final long NANOS_PER_SEC = 1000 * 1000 * 1000;
 	static final long BITS_PER_BYTE = 8;
-	protected static final long BITS_PER_LONG_WORD = BITS_PER_BYTE * Long.SIZE;
+	protected static final long BITS_PER_LONG_WORD = Long.SIZE; // doh - SIZE is bits not bytes.
 	
 	public static void main(String[] args) {
 		new AdHocTestConcurrentQueue().run();
