@@ -17,7 +17,6 @@
 
 package oss.alphazero.util.concurrent;
 
-import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -28,6 +27,7 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.util.NoSuchElementException;
 import java.util.Queue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -159,8 +159,8 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 		}
 		
 		try {
-//			outputs[SENDER] = this.sndsocket.getOutputStream();
-			outputs[SENDER] = new BufferedOutputStream(this.sndsocket.getOutputStream(), SND_BUFF_SIZE*2);
+			outputs[SENDER] = this.sndsocket.getOutputStream();
+//			outputs[SENDER] = new BufferedOutputStream(this.sndsocket.getOutputStream(), SND_BUFF_SIZE*2);
 		} catch (Exception e) {
 			String errmsg = String.format("%s exception on get OutputStream for SND ", e);
 			Log.error(errmsg, e);
@@ -177,17 +177,19 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 		Thread t_send_bootstrap;
 		
 		try {
-			Runnable rcv_bootstrap_task = this.new EndpointRecvBootstrap();
+			final CountDownLatch latch = new CountDownLatch(1);
+			Runnable rcv_bootstrap_task = this.new EndpointRecvBootstrap(latch);
 			t_recv_bootstrap = new Thread(rcv_bootstrap_task);
 			
 			Log.log("startup recv endpoint ...");
 			t_recv_bootstrap.start();
+			latch.await();
 			
-			// TODO: REVU: unreliable -- latch it
-			Thread.sleep(1);
-			while(port_ref.get() == INIT_PORT) {
-				Thread.sleep(100L);
-			}
+//			// TODO: REVU: unreliable -- latch it
+//			Thread.sleep(1);
+//			while(port_ref.get() == INIT_PORT) {
+//				Thread.sleep(100L);
+//			}
 				
 			Log.log("startup send endpoint ...");
 			Runnable snd_bootstrap_task = this.new EndpointSendBootstrap(port_ref.get());
@@ -238,6 +240,9 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 	// ========================================================================
 	
 	public class EndpointRecvBootstrap implements Runnable {
+		final CountDownLatch latch;
+		
+		EndpointRecvBootstrap (CountDownLatch latch){ this.latch = latch;}
 
 		@Override final
 		public void run() {
@@ -259,6 +264,7 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 				Log.log("-- RCV endpoint port set to %d", port_ref.get());
 				
 				Log.log("-- RCV endpoint now accepting connection ..");
+				latch.countDown();
 				Socket socket = server.accept();
 				socket.setKeepAlive(true);
 				socket.setPerformancePreferences(SO_CONNTIME_PREF, SO_LATENCY_PREF, SO_BANDWIDTH_PREF);
@@ -373,9 +379,9 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 	// ========================================================================
 	// Temp Tests // REMOVE AT WILL
 	// ========================================================================
-//	public static void main(String[] args) {
-//		@SuppressWarnings("unused")
-//		Queue<byte[]> pipe = new TcpQueueBase();
-//		Log.log("OK, bye!");
-//	}
+	public static void main(String[] args) {
+		@SuppressWarnings("unused")
+		Queue<byte[]> pipe = new TcpQueueBase();
+		Log.log("OK, bye!");
+	}
 }
