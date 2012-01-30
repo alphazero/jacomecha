@@ -77,10 +77,10 @@ public class DataCodec {
         return ((b1 << 24) + (b2 << 16) + (b3 << 8) + (b4 << 0));
     }
 
-    public static final byte[] writeShort(final int v, final byte[] b) throws NullPointerException, IllegalArgumentException {
+    public static final byte[] writeShort(final short v, final byte[] b) throws NullPointerException, IllegalArgumentException {
     	return writeShort(v, b, 0);
     }
-    public static final byte[] writeShort(final int v, final byte[] b, final int off) throws NullPointerException, IllegalArgumentException {
+    public static final byte[] writeShort(final short v, final byte[] b, final int off) throws NullPointerException, IllegalArgumentException {
 		if(b==null)
 			throw new NullPointerException("b");
 		if(b.length - off < SHORT_BYTES) 
