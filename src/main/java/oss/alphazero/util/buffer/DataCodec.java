@@ -9,10 +9,12 @@ package oss.alphazero.util.buffer;
 public class DataCodec {
 	static public final int LONG_BYTES = Long.SIZE / Byte.SIZE;
 	static public final int INTEGER_BYTES = Integer.SIZE / Byte.SIZE;
-	static public final byte[] writeLong(final long v, final byte[] b) {
-	    return writeLong(v, b, 0);
+	static public final int SHORT_BYTES = Short.SIZE / Byte.SIZE;
+	
+	static public final void writeLong(final long v, final byte[] b) {
+	    writeLong(v, b, 0);
 	}
-	static public final byte[] writeLong(final long v, final byte[] b, final int off) {
+	static public final void writeLong(final long v, final byte[] b, final int off) {
 		if(b==null)
 			throw new NullPointerException("b");
 		if(b.length - off < LONG_BYTES) 
@@ -25,22 +27,6 @@ public class DataCodec {
 	    b[off+5] = (byte)(v >>> 16);
 	    b[off+6] = (byte)(v >>>  8);
 	    b[off+7] = (byte)(v >>>  0);
-	    return b;
-	}
-	
-	static public final byte[] writeInt(final int v, final byte[] b){
-		return writeInt(v, b, 0);
-	}
-	static public final byte[] writeInt(final int v, final byte[] b, final int off){
-		if(b==null)
-			throw new NullPointerException("b");
-		if(b.length - off < INTEGER_BYTES) 
-			throw new IllegalArgumentException(String.format("(b.len:%d, off:%d)", b.length, off).toString());
-        b[off]   = (byte) ((v >>> 24) & 0xFF);
-        b[off+1] = (byte) ((v >>> 16) & 0xFF);
-        b[off+2] = (byte) ((v >>>  8) & 0xFF);
-        b[off+3] = (byte) ((v >>>  0) & 0xFF);
-        return b;
 	}
 	
 	static public final long readLong(byte[] b){
@@ -63,6 +49,20 @@ public class DataCodec {
 		);
 	}
 	
+	static public final void writeInt(final int v, final byte[] b){
+		writeInt(v, b, 0);
+	}
+	static public final void writeInt(final int v, final byte[] b, final int off){
+		if(b==null)
+			throw new NullPointerException("b");
+		if(b.length - off < INTEGER_BYTES) 
+			throw new IllegalArgumentException(String.format("(b.len:%d, off:%d)", b.length, off).toString());
+        b[off]   = (byte) ((v >>> 24) & 0xFF);
+        b[off+1] = (byte) ((v >>> 16) & 0xFF);
+        b[off+2] = (byte) ((v >>>  8) & 0xFF);
+        b[off+3] = (byte) ((v >>>  0) & 0xFF);
+ 	}
+	
     public static final byte[] writeShort(final int v, final byte[] out) {
     	return writeShort(v, out, 0);
     }
@@ -72,4 +72,18 @@ public class DataCodec {
         out[off+1] = (byte) ((v >>> 0) & 0xFF);
         return out;
     }
+    
+    public static final short readShort(final byte[] b) {
+    	return readShort(b, 0);
+    }
+
+    public static final short readShort(final byte[] b, final int off) {
+		if(b==null)
+			throw new NullPointerException("b");
+		if(b.length - off < SHORT_BYTES) 
+			throw new IllegalArgumentException(String.format("(b.len:%d, off:%d)", b.length, off).toString());
+		
+        return (short)((b[off] << 8) + (b[off+1] << 0));
+    }
+
 }
