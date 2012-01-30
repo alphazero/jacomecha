@@ -73,8 +73,8 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 	// Properties 
 	// ----------------------------------------------------------------
 	
-	private static final int SND_BUFF_SIZE = 1024 * 4;
-	private static final int RCV_BUFF_SIZE = 4096 * 48;
+	private static final int SND_BUFF_SIZE = 1024 * 8;
+	private static final int RCV_BUFF_SIZE = 1024 * 1024;
 	private static final int SO_RCV_BUFF_SIZE = RCV_BUFF_SIZE;
 	private static final int SO_SND_BUFF_SIZE = SND_BUFF_SIZE;
 
@@ -184,21 +184,11 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 			Log.log("startup recv endpoint ...");
 			t_recv_bootstrap.start();
 			latch.await();
-			
-//			// TODO: REVU: unreliable -- latch it
-//			Thread.sleep(1);
-//			while(port_ref.get() == INIT_PORT) {
-//				Thread.sleep(100L);
-//			}
 				
 			Log.log("startup send endpoint ...");
 			Runnable snd_bootstrap_task = this.new EndpointSendBootstrap(port_ref.get());
 			t_send_bootstrap = new Thread(snd_bootstrap_task);
 			t_send_bootstrap.start();
-			
-//			while(recvchan_ref.get() == null) {
-//				Thread.sleep(1000L);
-//			}
 		} catch (Throwable e) {
 			Log.error("failed to start connection establishment threads", e);
 			throw new RuntimeException(e);
@@ -324,8 +314,9 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 			}
 		}
 	}
+	
 	// ----------------------------------------------------------------
-	// INTERFACE:												Queue
+	// INTERFACE:												  Queue
 	// ----------------------------------------------------------------
 	
 	/* (non-Javadoc) @see java.util.Queue#offer(java.lang.Object) */
@@ -349,7 +340,14 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 			int alen = 0;
 			alen = this.rcvin.available();
 			if(alen == 0) return null;
+//			alen = SO_RCV_BUFF_SIZE;
 			data = new byte[alen];
+			int off = 0;
+			while (off < alen){
+				off += this.rcvin.read(data, off, data.length - off);
+//				if(off == alen) break;
+//				System.out.format("off:%d\n", off);
+			}
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
