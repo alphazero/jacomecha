@@ -10,10 +10,10 @@ public class DataCodec {
 	static public final int INTEGER_BYTES = Integer.SIZE / Byte.SIZE;
 	static public final int SHORT_BYTES = Short.SIZE / Byte.SIZE;
 	
-	static public final void writeLong(final long v, final byte[] b) {
+	static public final void writeLong(final long v, final byte[] b) throws NullPointerException, IllegalArgumentException {
 	    writeLong(v, b, 0);
 	}
-	static public final void writeLong(final long v, final byte[] b, final int off) {
+	static public final void writeLong(final long v, final byte[] b, final int off) throws NullPointerException, IllegalArgumentException {
 		if(b==null)
 			throw new NullPointerException("b");
 		if(b.length - off < LONG_BYTES) 
@@ -62,10 +62,10 @@ public class DataCodec {
         b[off+3] = (byte) ((v >>>  0) & 0xFF);
  	}
 	
-    public static final int readInt(final byte[] b) {
+    public static final int readInt(final byte[] b) throws NullPointerException, IllegalArgumentException {
     	return readInt(b, 0);
     }
-    public static final int readInt(final byte[] b, final int off) {
+    public static final int readInt(final byte[] b, final int off) throws NullPointerException, IllegalArgumentException {
 		if(b==null)
 			throw new NullPointerException("b");
 		if(b.length - off < INTEGER_BYTES) 
@@ -77,10 +77,10 @@ public class DataCodec {
         return ((b1 << 24) + (b2 << 16) + (b3 << 8) + (b4 << 0));
     }
 
-    public static final byte[] writeShort(final int v, final byte[] b) {
+    public static final byte[] writeShort(final int v, final byte[] b) throws NullPointerException, IllegalArgumentException {
     	return writeShort(v, b, 0);
     }
-    public static final byte[] writeShort(final int v, final byte[] b, final int off) {
+    public static final byte[] writeShort(final int v, final byte[] b, final int off) throws NullPointerException, IllegalArgumentException {
 		if(b==null)
 			throw new NullPointerException("b");
 		if(b.length - off < SHORT_BYTES) 
@@ -91,11 +91,11 @@ public class DataCodec {
         return b;
     }
     
-    public static final short readShort(final byte[] b) {
+    public static final short readShort(final byte[] b) throws NullPointerException, IllegalArgumentException {
     	return readShort(b, 0);
     }
 
-    public static final short readShort(final byte[] b, final int off) {
+    public static final short readShort(final byte[] b, final int off) throws NullPointerException, IllegalArgumentException {
 		if(b==null)
 			throw new NullPointerException("b");
 		if(b.length - off < SHORT_BYTES) 
