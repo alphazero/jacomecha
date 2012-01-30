@@ -17,8 +17,6 @@
 
 package oss.alphazero.util.concurrent;
 
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -60,6 +58,14 @@ import oss.alphazero.util.support.AbstractNopCollection;
  * necessary to deal with queue getting full, e.g. throttling is another
  * nice 'free' benefit.</li>
  * 
+ * Performance is close to data structure based queues but it is in fact
+ * slower. 2 additional copies and allocates are performed in course of
+ * enq/deq in contrast to reference based DS queues and the memory ops,
+ * even if not contended, regardless are doubling the amount of data 
+ * shuffled between main memory and each core.  There is also clearly
+ * a cap on the throughput between the tcp endpoints, although traffic
+ * in that regard can be further optimized.k 
+ * 
  * Here TCP/IP is used, but naturally domain sockets (where available) 
  * can also be utilized.
  * <p>  
@@ -100,14 +106,14 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 	@SuppressWarnings("unused")
 	private final OutputStream 	rcvout;
 	
-	private static final int SND_BUFF_SIZE = 64 * 8; // affects latency as of now
+	private static final int SND_BUFF_SIZE = 256 * 8 * 2;
 	private static final int RCV_BUFF_SIZE = 1024 * 24;
 	
 	private static final int SO_RCV_BUFF_SIZE = RCV_BUFF_SIZE;
 	private static final int SO_SND_BUFF_SIZE = SND_BUFF_SIZE * 200;
 
-	private static final int DATA_BUFF_SIZE = 1024 * 4;
-	private static final int DATA_BUFF_CNT = 256;
+	private static final int DATA_BUFF_SIZE = 1024 * 256;
+	private static final int DATA_BUFF_CNT = 4;
 	
 	private final ByteBuffer[] wbuffers;
 	private int wbuffidx;
@@ -117,6 +123,9 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 	
 	private final byte[]   sndbuffer;
 	private int sndbuffoff;
+	
+	private final byte[]   rcvbuffer;
+	private int rcvbuffoff;
 	
 	// ----------------------------------------------------------------
 	// Constructor 
@@ -148,12 +157,15 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 		
 		sndbuffer = allocateSendBuffer();
 		sndbuffoff = 0;
+		
+		rcvbuffer = allocateSendBuffer();
+		rcvbuffoff = 0;
 	}
 	
 	// ----------------------------------------------------------------
 	// INTERFACE:												  Queue
 	// ----------------------------------------------------------------
-	
+	private static final int MSG_SIZE = 2 * 4;
 	/* (non-Javadoc) @see java.util.Queue#offer(java.lang.Object) */
 	@Override
 	public final boolean offer(final byte[] b) {
@@ -163,30 +175,14 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 		if(b.length > currcap) {
 			currbuff.clear();
 			// REVU: not handling sender overtaking receiver
-			// TODO: place to READ a (TODO) virtual rbuffidx
 			wbuffidx = (curridx+1)%DATA_BUFF_CNT;
 			currbuff = wbuffers[wbuffidx];
 		}
-		// REVU: doff is redundant if code is correct ..
-//		final int doff = currbuff.position();
-//		final int dlen = b.length;
 		currbuff.put(b);
 		
-		if(sndbuffoff + 12 > sndbuffer.length) {
+		if(sndbuffoff + MSG_SIZE > sndbuffer.length) {
 			/* flush */
 			try {
-// DEBUG				
-//				byte[] bb = sndbuffer;
-//				int cnt = 0;
-//				for(int off=0; off<sndbuffer.length-12; off+=12){
-//					cnt++;
-//			        Log.log("-----------------------------------------------------------------------------");
-//			        Log.log("FLUSH: --- %02X %02X %02X %02X ---", bb[off],   bb[off+1], bb[off+2],  bb[off+3]);
-//			        Log.log("FLUSH: --- %02X %02X %02X %02X ---", bb[off+4], bb[off+5], bb[off+6],  bb[off+7]);
-//			        Log.log("FLUSH: --- %02X %02X %02X %02X ---", bb[off+8], bb[off+9], bb[off+10], bb[off+11]);
-//			        Log.log("-----------------------------------------------------------------------------");
-//				}
-//				Log.log("**********************flush msg cnt:%d", cnt);
 				this.sndout.write(sndbuffer);
 				this.sndout.flush();
 				sndbuffoff = 0;
@@ -194,15 +190,9 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 				e1.printStackTrace();
 			}
 		}
-		// REVU: 
-		//	1 - switch to short for dlen
-		//  2 - don't need doff (see REVU in poll())
-		// msg is 12 bytes:
-		// (int:bidx) (int:doff) (int:dlen)
-		DataCodec.writeInt(wbuffidx, sndbuffer, sndbuffoff); sndbuffoff += DataCodec.INTEGER_BYTES;
-//		DataCodec.writeInt(doff, sndbuffer, sndbuffoff);    sndbuffoff += DataCodec.INTEGER_BYTES;
-		DataCodec.writeInt(b.length, sndbuffer, sndbuffoff);    sndbuffoff += DataCodec.INTEGER_BYTES;
 
+		DataCodec.writeInt(wbuffidx, sndbuffer, sndbuffoff); sndbuffoff += DataCodec.INTEGER_BYTES;
+		DataCodec.writeInt(b.length, sndbuffer, sndbuffoff);    sndbuffoff += DataCodec.INTEGER_BYTES;
 		return true;
 	}
 
@@ -210,27 +200,32 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 	@Override
 	public byte[] poll() {
 		byte[] data = null;
-		// REVU: clearly net io is a bottle neck.
-		// TODO: cache this and get rid of general purpose bufferedInput
-		DataInputStream in = (DataInputStream) rcvin;
-		try {
-			final int buffidx = in.readInt();
-			if(buffidx != rbuffidx) {
-				rbuffers[rbuffidx].clear();
-				rbuffidx = buffidx;
+		final int lim = rcvbuffer.length;
+		if(rcvbuffoff == lim) {
+			/* get more data */
+			final InputStream in = rcvin;
+			int off = 0;
+			while(off < lim) {
+				try {
+					off += in.read(rcvbuffer, off, lim-off);
+				} catch (IOException e) {
+					e.printStackTrace();
+					throw new RuntimeException("Error reading from inputstream", e);
+				}
 			}
-			// REVU: note that doff is redundant as ByteBuffer will keep track
-			// if there are no bugs in code (haha)
-			// TODO: that's 4 bytes per message -- remove it.
-//			final int doff = in.readInt();
-			final int dlen = in.readInt();
-//			Log.log("READ: %2d | %6d | %6d", buffidx, doff, dlen);
-			data = new byte[dlen];
-			rbuffers[buffidx].get(data);
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(1);
+			rcvbuffoff = 0;
 		}
+		final int buffidx = DataCodec.readInt(rcvbuffer, rcvbuffoff); 
+		rcvbuffoff +=DataCodec.INTEGER_BYTES;
+		
+		if(buffidx != rbuffidx) {
+			rbuffers[rbuffidx].clear();
+			rbuffidx = buffidx;
+		}
+		final int dlen = DataCodec.readInt(rcvbuffer, rcvbuffoff); 
+		rcvbuffoff +=DataCodec.INTEGER_BYTES;
+		data = new byte[dlen];
+		rbuffers[buffidx].get(data);
 		return data;
 	}
 
@@ -281,9 +276,7 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 		InputStream[] inputs = new InputStream[2];
 		
 		try {
-			inputs[RECIEVER] = new DataInputStream(new BufferedInputStream(this.rcvsocket.getInputStream(), RCV_BUFF_SIZE));
-//			inputs[RECIEVER] = new FastBufferedInputStream(this.rcvsocket.getInputStream(), RCV_BUFF_SIZE);
-//			inputs[RECIEVER] = this.rcvsocket.getInputStream();
+			inputs[RECIEVER] = this.rcvsocket.getInputStream();
 		} catch (Exception e) {
 			String errmsg = String.format("%s exception on get InputStream for RCV ", e);
 			Log.error(errmsg, e);
@@ -313,7 +306,6 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 		
 		try {
 			outputs[SENDER] = this.sndsocket.getOutputStream();
-//			outputs[SENDER] = new BufferedOutputStream(this.sndsocket.getOutputStream(), SND_BUFF_SIZE*2);
 		} catch (Exception e) {
 			String errmsg = String.format("%s exception on get OutputStream for SND ", e);
 			Log.error(errmsg, e);
@@ -471,10 +463,10 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 	// ========================================================================
 	// Temp Tests // REMOVE AT WILL
 	// ========================================================================
-	public static void main(String[] args) {
-		@SuppressWarnings("unused")
-		Queue<byte[]> pipe = new TcpQueueBase();
-		pipe.offer(new byte[1024]);
-		Log.log("OK, bye!");
-	}
+//	public static void main(String[] args) {
+//		@SuppressWarnings("unused")
+//		Queue<byte[]> pipe = new TcpQueueBase();
+//		pipe.offer(new byte[1024]);
+//		Log.log("OK, bye!");
+//	}
 }

@@ -34,11 +34,11 @@ public class AdHocTestConcurrentQueue {
 		new AdHocTestConcurrentQueue().run();
 	}
 	private final void run () {
-//		Queue<byte[]> q = new TcpQueueBase();
+		Queue<byte[]> q = new TcpQueueBase();
 //		Queue<byte[]> q = new TcpNioQueueBase();
 //		Queue<byte[]> q = new ConsumerProducerQueue<byte[]>();
 //		Queue<byte[]> q = new Nto1Concurrent2LockQueue<byte[]>();
-		Queue<byte[]> q = new LinkedBlockingQueue<byte[]>();
+//		Queue<byte[]> q = new LinkedBlockingQueue<byte[]>();
 //		Queue<byte[]> q = new ConcurrentLinkedQueue<byte[]>();
 		final Thread tproducer = new Thread(newProducerTask(q), "producer-1");
 //		final Thread tproducer2 = new Thread(newProducerTask(q), "producer-2");
@@ -67,8 +67,10 @@ public class AdHocTestConcurrentQueue {
 		if(size%8!=0) throw new IllegalArgumentException("size is not multiple of 8: " + size);
 		byte[] b = new byte[size];
 		long lval = 0L;
+		long timestamp = System.nanoTime();
 		for(int off=0; off<size; off+=DataCodec.LONG_BYTES){
-			DataCodec.writeLong(System.nanoTime(), b, off);
+			timestamp = System.nanoTime();
+			DataCodec.writeLong(timestamp, b, off);
 //			DataCodec.writeLong(lval, b, off); lval+=1;
 		}
 		return b;
@@ -102,8 +104,8 @@ public class AdHocTestConcurrentQueue {
 				long totnanos = 0L;
 				int n = 0;
 				
-				final int lim = 100;
-				final int blim = 12500000;
+				final int lim = 1000;
+				final int blim = 1250000;
 				
 				Log.log("consumer task started");
 				final long start0 = System.nanoTime();
@@ -123,15 +125,13 @@ public class AdHocTestConcurrentQueue {
 							rlen += data.length;
 						}
 					}
-					long now = System.nanoTime();
-					long delta = now - start;
-					sample_v = DataCodec.readLong(data);
-					Log.log("sample latency:%04d (usec) | read: %d", TimeUnit.NANOSECONDS.toMicros(now-sample_v), sample_v);
-
-					n++;
-					
+//					long now = System.nanoTime();
+//					long delta = now - start;
+//					sample_v = DataCodec.readLong(data);
+//					Log.log("sample latency:%04d (usec) | read: %d", TimeUnit.NANOSECONDS.toMicros(now-sample_v), sample_v);
 //					report(String.valueOf(n), rlen, delta, qclass);
 					
+					n++;
 					totbytes += rlen;
 				}
 				totnanos = System.nanoTime() - start0;

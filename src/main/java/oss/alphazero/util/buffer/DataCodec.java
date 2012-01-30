@@ -1,6 +1,5 @@
 package oss.alphazero.util.buffer;
 
-
 /**
  * Convert to and from language primitives from provided buffers.
  * @author Joubin <alphazero@sensesay.net>
@@ -63,14 +62,33 @@ public class DataCodec {
         b[off+3] = (byte) ((v >>>  0) & 0xFF);
  	}
 	
-    public static final byte[] writeShort(final int v, final byte[] out) {
-    	return writeShort(v, out, 0);
+    public static final int readInt(final byte[] b) {
+    	return readInt(b, 0);
     }
-    
-    public static final byte[] writeShort(final int v, final byte[] out, final int off) {
-        out[off] = (byte) ((v >>> 8) & 0xFF);
-        out[off+1] = (byte) ((v >>> 0) & 0xFF);
-        return out;
+    public static final int readInt(final byte[] b, final int off) {
+		if(b==null)
+			throw new NullPointerException("b");
+		if(b.length - off < INTEGER_BYTES) 
+			throw new IllegalArgumentException(String.format("(b.len:%d, off:%d)", b.length, off).toString());
+        int b1 = b[off] & 0xFF;
+        int b2 = b[off+1] & 0xFF;
+        int b3 = b[off+2] & 0xFF;
+        int b4 = b[off+3] & 0xFF;
+        return ((b1 << 24) + (b2 << 16) + (b3 << 8) + (b4 << 0));
+    }
+
+    public static final byte[] writeShort(final int v, final byte[] b) {
+    	return writeShort(v, b, 0);
+    }
+    public static final byte[] writeShort(final int v, final byte[] b, final int off) {
+		if(b==null)
+			throw new NullPointerException("b");
+		if(b.length - off < SHORT_BYTES) 
+			throw new IllegalArgumentException(String.format("(b.len:%d, off:%d)", b.length, off).toString());
+		
+        b[off] = (byte) ((v >>> 8) & 0xFF);
+        b[off+1] = (byte) ((v >>> 0) & 0xFF);
+        return b;
     }
     
     public static final short readShort(final byte[] b) {
@@ -82,8 +100,10 @@ public class DataCodec {
 			throw new NullPointerException("b");
 		if(b.length - off < SHORT_BYTES) 
 			throw new IllegalArgumentException(String.format("(b.len:%d, off:%d)", b.length, off).toString());
-		
-        return (short)((b[off] << 8) + (b[off+1] << 0));
+
+        int b1 = b[off] & 0xFF;
+        int b2 = b[off+1] & 0xFF;
+        return (short)((b1 << 8) + (b2 << 0));
     }
 
 }
