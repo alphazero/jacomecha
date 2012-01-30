@@ -112,7 +112,7 @@ public class TcpPipe extends AbstractNopCollection<byte[]> implements Queue<byte
 	private static final int SO_RCV_BUFF_SIZE = RCV_BUFF_SIZE;
 	private static final int SO_SND_BUFF_SIZE = SND_BUFF_SIZE * 200;
 
-	private static final int DATA_BUFF_SIZE = 1024 * 256;
+	private static final int DATA_BUFF_SIZE = 1024 * 64 * 2 * 1;
 //	private static final int DATA_BUFF_CNT = 4;
 	private static final short DATA_BUFF_CNT = 4;
 	
@@ -380,7 +380,7 @@ public class TcpPipe extends AbstractNopCollection<byte[]> implements Queue<byte
 	}
 
 	private static final int SO_BANDWIDTH_PREF = 1;
-	private static final int SO_LATENCY_PREF = 2;
+	private static final int SO_LATENCY_PREF = 2000;
 	private static final int SO_CONNTIME_PREF = 0;
 	
 	// ========================================================================
