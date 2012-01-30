@@ -35,6 +35,7 @@ public class AdHocTestConcurrentQueue {
 	}
 	private final void run () {
 		Queue<byte[]> q = new TcpQueueBase();
+//		Queue<byte[]> q = new TcpPipe();
 //		Queue<byte[]> q = new TcpNioQueueBase();
 //		Queue<byte[]> q = new ConsumerProducerQueue<byte[]>();
 //		Queue<byte[]> q = new Nto1Concurrent2LockQueue<byte[]>();
@@ -69,7 +70,7 @@ public class AdHocTestConcurrentQueue {
 		long lval = 0L;
 		long timestamp = System.nanoTime();
 		for(int off=0; off<size; off+=DataCodec.LONG_BYTES){
-			timestamp = System.nanoTime();
+//			timestamp = System.nanoTime();
 			DataCodec.writeLong(timestamp, b, off);
 //			DataCodec.writeLong(lval, b, off); lval+=1;
 		}
@@ -79,12 +80,11 @@ public class AdHocTestConcurrentQueue {
 	private final Runnable newProducerTask (final Queue<byte[]> q) {
 		return new Runnable() {
 			@Override final public void run() {
-				byte[] buff = new byte[1024 * 4];
-				final int iters = 4096 * 12;
+				final int iters = Integer.MAX_VALUE;
 				Log.log("producer task started");
 				for(;;){
 					for(int i=0; i<iters; i++){
-						while(!q.offer(getBlock(1024))){
+						while(!q.offer(getBlock(1024*1))){
 							LockSupport.parkNanos(10L);
 //							System.out.println(":");
 						}
@@ -104,7 +104,7 @@ public class AdHocTestConcurrentQueue {
 				long totnanos = 0L;
 				int n = 0;
 				
-				final int lim = 1000;
+				final int lim = 10000;
 				final int blim = 1250000;
 				
 				Log.log("consumer task started");
