@@ -29,14 +29,14 @@ import oss.alphazero.util.buffer.DataCodec;
  * @date:  Jan 30, 2012
  */
 @Test(groups={"utils-datacodec-encode"})
-public class TestDataCodecEncodeShortValues {
+public class TestDataCodecEncodeIntegerValues {
 
-	public final static String RANDOM_SHORTS = "random-shorts";
-	public final static String RANDOM_BYTEARRAY_SHORT_ARGS = "random-byte[]-short-args";
+	public final static String RANDOM_INTEGERS = "random-ints";
+	public final static String RANDOM_BYTEARRAY_INTEGER_ARGS = "random-byte[]-int-args";
 	
-	public TestDataCodecEncodeShortValues() {
+	public TestDataCodecEncodeIntegerValues() {
 //		Log.log("============================================");
-//		Log.log("TEST - %s - Short values", DataCodec.class.getSimpleName());
+//		Log.log("TEST - %s - Integer values", DataCodec.class.getSimpleName());
 //		Log.log("============================================");
 	}
 	
@@ -44,51 +44,51 @@ public class TestDataCodecEncodeShortValues {
 	//	TESTS
 	// ------------------------------------------------------------------------
 	
-	@Test(dataProvider=RANDOM_SHORTS)
-	public void testConversion(short data) {
+	@Test(dataProvider=RANDOM_INTEGERS)
+	public void testConversion(int data) {
 		byte[] b = null;
 		try {
-			String dataStr = String.format("{ 0x%04X | %+06d }", data, data).toString();
-			Log.log("TEST - convert short to byte and back - provided %s", dataStr);
-			String assertStr = String.format("DataCodec writeShort() -> readShort() with data %s", dataStr).toString(); 
+			String dataStr = String.format("{ 0x%08X | %+013d }", data, data).toString();
+			Log.log("TEST - convert int to byte and back - provided %s", dataStr);
+			String assertStr = String.format("DataCodec writeInteger() -> readInteger() with data %s", dataStr).toString(); 
 			
 
-			b = newPrimitiveByteArray(DataCodec.SHORT_BYTES);
-			DataCodec.writeShort(data, b);
-			short v = DataCodec.readShort(b);
+			b = newPrimitiveByteArray(DataCodec.INTEGER_BYTES);
+			DataCodec.writeInt(data, b);
+			int v = DataCodec.readInt(b);
 			assertEquals(v, data, assertStr);
 			
 		} catch (NullPointerException e) {
-			fail("writeShort with non-null buffer should not throw exception", e);
+			fail("writeInteger with non-null buffer should not throw exception", e);
 		} catch (IllegalArgumentException e) {
-			String msg = String.format("writeShort with %d length buffer should not throw exception", b.length).toString();
+			String msg = String.format("writeInteger with %d length buffer should not throw exception", b.length).toString();
 			fail(msg, e);
 		}
 	}
 	
-	@Test(dataProvider=RANDOM_BYTEARRAY_SHORT_ARGS)
-	public void testConversion2(Byte[] barr, short data) {
+	@Test(dataProvider=RANDOM_BYTEARRAY_INTEGER_ARGS)
+	public void testConversion2(Byte[] barr, int data) {
 		byte[] b = null;
 		try {
-			String dataStr = String.format("{ 0x%04X | %+06d }", data, data).toString();
-			Log.log("TEST - convert short to byte and back - provided %s", dataStr);
-			String assertStr = String.format("DataCodec writeShort() -> readShort() with data %s", dataStr).toString(); 
+			String dataStr = String.format("{ 0x%08X | %+013d }", data, data).toString();
+			Log.log("TEST - convert int to byte and back - provided %s", dataStr);
+			String assertStr = String.format("DataCodec writeInteger() -> readInteger() with data %s", dataStr).toString(); 
 			
 			b = toPrimitiveByteArray(barr);
 			
-			DataCodec.writeShort(data, b);
-			short v = DataCodec.readShort(b);
+			DataCodec.writeInt(data, b);
+			int v = DataCodec.readInt(b);
 			assertEquals(v, data, assertStr);
 			
 		} catch (NullPointerException e) {
-			fail("writeShort with non-null buffer should not throw exception", e);
+			fail("writeInteger with non-null buffer should not throw exception", e);
 		} catch (IllegalArgumentException e) {
-			String msg = String.format("writeShort with %d length buffer should not throw exception", b.length).toString();
+			String msg = String.format("writeInteger with %d length buffer should not throw exception", b.length).toString();
 			fail(msg, e);
 		}
 	}
 	
-//	public void testInvalidArg (Byte[] barr, short data){
+//	public void testInvalidArg (Byte[] barr, int data){
 //		
 //	}
 	// ------------------------------------------------------------------------
@@ -117,16 +117,16 @@ public class TestDataCodecEncodeShortValues {
 		return null;
 	}
 	
-	@DataProvider(name=RANDOM_SHORTS)
-	public Object[][] randomShorts() {
+	@DataProvider(name=RANDOM_INTEGERS)
+	public Object[][] randomIntegers() {
 		
-		Short[] shorts = SpecDataProvider.rangeOfShorts();
-		final int cnt = shorts.length;
+		Integer[] ints = SpecDataProvider.rangeOfIntegers();
+		final int cnt = ints.length;
 		Object[][] data = new Object[cnt][];
 		try {
 			for(int i=0; i<cnt; i++){
 				data[i] = new Object[1];
-				data[i][0] = shorts[i];
+				data[i][0] = ints[i];
 			}
 		}
 		catch (Throwable e){
@@ -139,18 +139,18 @@ public class TestDataCodecEncodeShortValues {
 		return data;
 	}
 
-	@DataProvider(name=RANDOM_BYTEARRAY_SHORT_ARGS)
+	@DataProvider(name=RANDOM_BYTEARRAY_INTEGER_ARGS)
 	public Object[][] randomValidArgs() {
 		
-		Short[] shorts = SpecDataProvider.rangeOfShorts();
-		final int cnt = shorts.length;
+		Integer[] ints = SpecDataProvider.rangeOfIntegers();
+		final int cnt = ints.length;
 		
 		Object[][] data = new Object[cnt][];
 		try {
 			for(int i=0; i<cnt; i++){
 				data[i] = new Object[2];
-				data[i][0] = newByteArray(DataCodec.SHORT_BYTES);
-				data[i][1] = shorts[i];
+				data[i][0] = newByteArray(DataCodec.INTEGER_BYTES);
+				data[i][1] = ints[i];
 			}
 		}
 		catch (Throwable e){
@@ -164,21 +164,21 @@ public class TestDataCodecEncodeShortValues {
 	}
 	
 //	public static void main(String[] args) {
-//		TestDataCodecEncodeShortValues t = new TestDataCodecEncodeShortValues();
-//		Byte[] barray = newByteArray(DataCodec.SHORT_BYTES);
+//		TestDataCodecEncodeIntegerValues t = new TestDataCodecEncodeIntegerValues();
+//		Byte[] barray = newByteArray(DataCodec.INTEGER_BYTES);
 //		assertNotNull(barray);
 //		for(int i=0; i<barray.length; i++)
 //			assertNotNull(barray[i]);
 //		Object[][] argarray2 = t.randomValidArgs();
-//		Object[][] argarray = t.randomShorts();
+//		Object[][] argarray = t.randomIntegers();
 //		assertNotNull(argarray);
 //		Log.log("argarray.length: %d", argarray.length);
 //		for(int i=0; i<argarray.length; i++){
 //			assertNotNull(argarray[i]);
 //			Byte[] ba = (Byte[]) argarray2[i][0];
-//			Short sh = (Short) argarray2[i][1];
-//			t.testConversion((Short)argarray[i][0]);
-//			t.testConversion2((Byte[])argarray2[i][0], (Short)argarray2[i][1]);
+//			Integer sh = (Integer) argarray2[i][1];
+//			t.testConversion((Integer)argarray[i][0]);
+//			t.testConversion2((Byte[])argarray2[i][0], (Integer)argarray2[i][1]);
 //		}
 //	}
 }
