@@ -63,10 +63,11 @@ public class AdHocTestConcurrentQueue {
 		} catch (Throwable e) { e.printStackTrace(); System.exit(1); }
 
 	}
-	
+	final byte[] _buff = new byte[BUFF_SIZE];
 	private final byte[] getBlock(int size){
 		if(size%8!=0) throw new IllegalArgumentException("size is not multiple of 8: " + size);
-		byte[] b = new byte[size];
+//		byte[] b = new byte[size];
+		byte[] b = _buff;
 		long lval = 0L;
 		long timestamp = System.nanoTime();
 		for(int off=0; off<size; off+=DataCodec.LONG_BYTES){
@@ -76,7 +77,7 @@ public class AdHocTestConcurrentQueue {
 		}
 		return b;
 	}
-	
+	static final int BUFF_SIZE = 1024;
 	private final Runnable newProducerTask (final Queue<byte[]> q) {
 		return new Runnable() {
 			@Override final public void run() {
@@ -84,7 +85,7 @@ public class AdHocTestConcurrentQueue {
 				Log.log("producer task started");
 				for(;;){
 					for(int i=0; i<iters; i++){
-						while(!q.offer(getBlock(1024*1))){
+						while(!q.offer(getBlock(BUFF_SIZE))){
 							LockSupport.parkNanos(10L);
 //							System.out.println(":");
 						}
@@ -104,8 +105,8 @@ public class AdHocTestConcurrentQueue {
 				long totnanos = 0L;
 				int n = 0;
 				
-				final int lim = 10000;
-				final int blim = 1250000;
+				final int lim = 100;
+				final int blim = 125000000;
 				
 				Log.log("consumer task started");
 				final long start0 = System.nanoTime();

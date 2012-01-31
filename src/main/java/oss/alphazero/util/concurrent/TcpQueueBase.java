@@ -155,10 +155,10 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 		rbuffers = getReaderBuffers (wbuffers);
 		rbuffidx = 0;
 		
-		sndbuffer = allocateSendBuffer();
+		sndbuffer = allocateSndBuffer();
 		sndbuffoff = 0;
 		
-		rcvbuffer = allocateSendBuffer();
+		rcvbuffer = allocateRcvBuffer();
 		rcvbuffoff = 0;
 	}
 	
@@ -169,16 +169,20 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 	/* (non-Javadoc) @see java.util.Queue#offer(java.lang.Object) */
 	@Override
 	public final boolean offer(final byte[] b) {
+//final long start0 = System.nanoTime();
 		int curridx = wbuffidx;
 		ByteBuffer currbuff = wbuffers[wbuffidx];
 		final int currcap = currbuff.remaining();
 		if(b.length > currcap) {
 			currbuff.clear();
 			// REVU: not handling sender overtaking receiver
-			wbuffidx = (curridx+1)%DATA_BUFF_CNT;
-			currbuff = wbuffers[wbuffidx];
+			curridx = (curridx+1)%DATA_BUFF_CNT;
+			currbuff = wbuffers[curridx];
+			wbuffidx = curridx;
 		}
+//final long mark1 = System.nanoTime();
 		currbuff.put(b);
+//final long mark2 = System.nanoTime();
 		
 		if(sndbuffoff + MSG_SIZE > sndbuffer.length) {
 			/* flush */
@@ -191,9 +195,29 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 			}
 		}
 
+//final long mark3 = System.nanoTime();
 		DataCodec.writeInt(wbuffidx, sndbuffer, sndbuffoff); sndbuffoff += DataCodec.INTEGER_BYTES;
-		DataCodec.writeInt(b.length, sndbuffer, sndbuffoff);    sndbuffoff += DataCodec.INTEGER_BYTES;
+		DataCodec.writeInt(b.length, sndbuffer, sndbuffoff); sndbuffoff += DataCodec.INTEGER_BYTES;
+//final long mark4 = System.nanoTime();
+//reportSND(start0, mark1, mark2, mark3, mark4);
 		return true;
+	}
+	private static final void reportSND(
+			final long start,
+			final long buffselect,
+			final long buffput,
+			final long postflush,
+			final long end
+			) 
+	{
+		final long deltot = end - start;
+		final long delsel = buffselect - start;
+		final long delput = buffput - buffselect;
+		final long delfls = postflush - buffput;
+		final long delwrt = end - postflush;
+		System.out.format("%014d %014d %014d %014d %014d ", deltot, delsel, delput, delfls, delwrt);
+		System.out.println();
+//		if(deltot > 1001000) System.exit(1);
 	}
 
 	/* (non-Javadoc) @see java.util.Queue#poll() */
@@ -252,7 +276,10 @@ public class TcpQueueBase extends AbstractNopCollection<byte[]> implements Queue
 	// ----------------------------------------------------------------
 	// Inner Ops 
 	// ----------------------------------------------------------------
-	private final byte[] allocateSendBuffer() {
+	private final byte[] allocateSndBuffer() {
+		return new byte[SND_BUFF_SIZE];
+	}
+	private final byte[] allocateRcvBuffer() {
 		return new byte[SND_BUFF_SIZE];
 	}
 	private final ByteBuffer[] allocateWriterBuffers() {

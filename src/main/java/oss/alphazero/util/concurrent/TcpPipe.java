@@ -182,7 +182,7 @@ public class TcpPipe extends AbstractNopCollection<byte[]> implements Queue<byte
 			currbuff = wbuffers[curridx];
 			wbuffidx = curridx;
 		}
-		currbuff.put(b);
+//		currbuff.put(b); // REVU: flush first?
 		
 		if(sndbuffoff + MSG_SIZE > sndbuffer.length) {
 			/* flush */
@@ -194,10 +194,12 @@ public class TcpPipe extends AbstractNopCollection<byte[]> implements Queue<byte
 				e1.printStackTrace();
 			}
 		}
+		
+		currbuff.put(b);  // REVU^:Or write first?
 
 //		DataCodec.writeInt(wbuffidx, sndbuffer, sndbuffoff); sndbuffoff += DataCodec.INTEGER_BYTES;
 //		DataCodec.writeInt(b.length, sndbuffer, sndbuffoff); sndbuffoff += DataCodec.INTEGER_BYTES;
-		DataCodec.writeShort(wbuffidx, sndbuffer, sndbuffoff); sndbuffoff += DataCodec.SHORT_BYTES;
+		DataCodec.writeShort(wbuffidx, sndbuffer, sndbuffoff);        sndbuffoff += DataCodec.SHORT_BYTES;
 		DataCodec.writeShort((short)b.length, sndbuffer, sndbuffoff); sndbuffoff += DataCodec.SHORT_BYTES;
 		return true;
 	}
